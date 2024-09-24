@@ -13,9 +13,6 @@ RUN npm install
 # Copy the rest of the application files
 COPY . .
 
-# Compile TypeScript code
-RUN npm run build
-
 # Expose the port the application will run on
 EXPOSE 3001
 
