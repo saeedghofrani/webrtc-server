@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  react-vite-app:
+  webrtc-server:
     build:
       context: .
       dockerfile: Dockerfile
