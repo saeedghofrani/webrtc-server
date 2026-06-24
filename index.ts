@@ -27,6 +27,7 @@ io.on('connection', (socket) => {
     const cleanName = String(name || 'Guest').trim().slice(0, 40);
     if (!cleanRoom) return;
 
+    const existingPeers = Array.from(io.sockets.adapter.rooms.get(cleanRoom) || []);
     socket.data.roomId = cleanRoom;
     socket.data.name = cleanName;
     socket.join(cleanRoom);
@@ -38,19 +39,33 @@ io.on('connection', (socket) => {
     }));
 
     io.to(cleanRoom).emit('room-users', users);
-    socket.to(cleanRoom).emit('peer-ready', { peerId: socket.id, name: cleanName });
+    existingPeers.forEach((peerId) => {
+      socket.to(peerId).emit('peer-ready', { peerId: socket.id, name: cleanName });
+    });
   });
 
-  socket.on('offer', ({ roomId, offer }) => {
-    socket.to(roomId).emit('offer', { from: socket.id, offer });
+  socket.on('offer', ({ roomId, to, offer }) => {
+    if (to) {
+      socket.to(to).emit('offer', { from: socket.id, roomId, offer });
+      return;
+    }
+    socket.to(roomId).emit('offer', { from: socket.id, roomId, offer });
   });
 
-  socket.on('answer', ({ roomId, answer }) => {
-    socket.to(roomId).emit('answer', { from: socket.id, answer });
+  socket.on('answer', ({ roomId, to, answer }) => {
+    if (to) {
+      socket.to(to).emit('answer', { from: socket.id, roomId, answer });
+      return;
+    }
+    socket.to(roomId).emit('answer', { from: socket.id, roomId, answer });
   });
 
-  socket.on('ice-candidate', ({ roomId, candidate }) => {
-    socket.to(roomId).emit('ice-candidate', { from: socket.id, candidate });
+  socket.on('ice-candidate', ({ roomId, to, candidate }) => {
+    if (to) {
+      socket.to(to).emit('ice-candidate', { from: socket.id, roomId, candidate });
+      return;
+    }
+    socket.to(roomId).emit('ice-candidate', { from: socket.id, roomId, candidate });
   });
 
   socket.on('chat-message', ({ roomId, author, text }: ChatPayload) => {
