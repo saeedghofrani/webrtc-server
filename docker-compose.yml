@@ -12,7 +12,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: "3001"
-      CORS_ORIGIN: "https://webrtc.46.249.100.50.sslip.io,https://webrtc.46.249.100.50.nip.io"
+      CORS_ORIGIN: "https://meet.saeedghofranai.xyz,https://webrtc.46.249.100.50.sslip.io,https://webrtc.46.249.100.50.nip.io"
     networks:
       - webrtc
 
