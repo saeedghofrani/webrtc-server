@@ -1,6 +1,7 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
+import { canJoinRoom } from './roomPolicy';
 
 const app = express();
 const server = http.createServer(app);
@@ -30,6 +31,12 @@ io.on('connection', (socket) => {
     if (!cleanRoom) return;
 
     const existingPeers = Array.from(io.sockets.adapter.rooms.get(cleanRoom) || []);
+    if (!canJoinRoom(existingPeers.length)) {
+      socket.emit('room-full', { roomId: cleanRoom });
+      console.log(`socket ${socket.id} rejected from ${cleanRoom}; room full`);
+      return;
+    }
+
     socket.data.roomId = cleanRoom;
     socket.data.name = cleanName;
     socket.join(cleanRoom);
@@ -42,6 +49,7 @@ io.on('connection', (socket) => {
     }));
 
     io.to(cleanRoom).emit('room-users', users);
+    socket.emit('room-joined', { roomId: cleanRoom, users });
     existingPeers.forEach((peerId) => {
       socket.to(peerId).emit('peer-ready', { peerId: socket.id, name: cleanName });
     });

@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
+const roomPolicy_1 = require("./roomPolicy");
 const app = (0, express_1.default)();
 const server = http_1.default.createServer(app);
 const io = new socket_io_1.Server(server, {
@@ -26,6 +27,11 @@ io.on('connection', (socket) => {
         if (!cleanRoom)
             return;
         const existingPeers = Array.from(io.sockets.adapter.rooms.get(cleanRoom) || []);
+        if (!(0, roomPolicy_1.canJoinRoom)(existingPeers.length)) {
+            socket.emit('room-full', { roomId: cleanRoom });
+            console.log(`socket ${socket.id} rejected from ${cleanRoom}; room full`);
+            return;
+        }
         socket.data.roomId = cleanRoom;
         socket.data.name = cleanName;
         socket.join(cleanRoom);
@@ -39,6 +45,7 @@ io.on('connection', (socket) => {
             });
         });
         io.to(cleanRoom).emit('room-users', users);
+        socket.emit('room-joined', { roomId: cleanRoom, users });
         existingPeers.forEach((peerId) => {
             socket.to(peerId).emit('peer-ready', { peerId: socket.id, name: cleanName });
         });
