@@ -1,5 +1,5 @@
 # Use an official Node.js image as the base image
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Set the working directory in the container
 WORKDIR /app
@@ -9,7 +9,7 @@ RUN apk add --no-cache curl
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
 # Copy the rest of the application files
 COPY . .
