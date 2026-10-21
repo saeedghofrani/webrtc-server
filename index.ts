@@ -1,11 +1,18 @@
 import express from 'express';
 import http from 'http';
 import { randomUUID } from 'crypto';
+import { isIP } from 'net';
 import { Server, Socket } from 'socket.io';
 import { canJoinRoom } from './roomPolicy';
+import { callLinksRouter } from './callLinks';
 
-export function createSignalingServer() {
+export function createSignalingServer(options: { callLinks?: Parameters<typeof callLinksRouter>[0] } = {}) {
   const app = express();
+  // Host Nginx reaches a published Docker port through the bridge gateway.
+  // Accept only explicitly configured proxy IPs, never a whole private subnet.
+  const proxyIps = (process.env.TRUSTED_PROXY_IPS || '').split(',').map((ip) => ip.trim()).filter((ip) => isIP(ip));
+  app.set('trust proxy', ['loopback', ...proxyIps]);
+  app.use('/api/call-links', express.json({ limit: '12kb' }), callLinksRouter(options.callLinks));
   const server = http.createServer(app);
   const io = new Server(server, {
     cors: { origin: process.env.CORS_ORIGIN?.split(',') || true, credentials: true },
@@ -100,7 +107,7 @@ export function createSignalingServer() {
     socket.on('leave-room', () => leave(socket));
     socket.on('disconnect', () => leave(socket));
   });
-  return { server, io };
+  return { app, server, io };
 }
 
 if (require.main === module) {

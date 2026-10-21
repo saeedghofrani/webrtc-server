@@ -1,0 +1,14 @@
+# Optional override: configure the private host path FIREBASE_SERVICE_ACCOUNT_FILE,
+# then review before applying to production with docker compose -f ... -f ... .
+services:
+  webrtc-server:
+    environment:
+      CALL_PUSH_ENABLED: "true"
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-}
+      CALL_LINK_STORE: /app/.data/call-links.json
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
+    volumes:
+      - call-links:/app/.data
+      - ${FIREBASE_SERVICE_ACCOUNT_FILE:?Set the private absolute Firebase service-account path}:/run/secrets/firebase-service-account.json:ro
+volumes:
+  call-links:

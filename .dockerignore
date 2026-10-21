@@ -2,3 +2,5 @@ node_modules
 .git
 .env*
 npm-debug.log
+.data
+*service-account*.json

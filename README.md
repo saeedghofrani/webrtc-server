@@ -87,6 +87,35 @@ For rollback, retain a versioned copy of the previous Docker image, retag it to 
 Compose image name, then run `docker compose up -d --no-build`. This disconnects
 active calls and requires no database migration.
 
+## Android incoming calls (configuration required)
+
+`/api/call-links` adds private ringing links without changing the existing room
+signaling events. A recipient explicitly subscribes their Android phone to a link;
+the sender requests a call and FCM delivers a high-priority, data-only alert.
+Calls expire after 45 seconds and have a 60-second per-link cooldown. Answer and
+decline require a device management credential; cancellation uses the unguessable
+call ID and private link. Push acceptance is not proof of ringing.
+
+Push is disabled by default. See `.env.example` and the optional
+`docker-compose.calls.yml` override. Keep `CALL_LINK_STORE` on a private durable
+volume, back it up, and run one signaling process. Its bounded registry supports
+2,000 links and 10 devices per link. Protect link URLs like passwords. Never log
+capability paths, FCM tokens, or device credentials. Configure edge rate limits;
+the backend trusts forwarded IP/protocol headers from loopback and optional exact `TRUSTED_PROXY_IPS`. In Docker, set this to the actual bridge gateway used by host Nginx; other bridge peers and subnet patterns are not trusted.
+
+The HTTPS proxy must route `/api/call-links` to this server, retaining the full
+path. Existing `/socket.io/` proxy behavior is unchanged. Health checks are
+`GET /health` and `GET /api/call-links/config`. Production FCM credentials must
+use Application Default Credentials for the Android app's Firebase project.
+The matching web/server images and Nginx API route were deployed on 2026-10-21. Physical Android ringing verification remains pending.
+
+The `uuid` override pins the compatible CommonJS release 11.1.1 to fix the
+transitive buffer-bounds advisory in Firebase Admin's dependency tree. Recheck
+the override when upgrading Firebase Admin.
+
+Android source and full setup instructions are in
+[webrtc-android](https://github.com/saeedghofrani/webrtc-android) (private repository).
+
 ## Related repository
 
 - [React WebRTC client](https://github.com/saeedghofrani/Webrtc-Client-React)

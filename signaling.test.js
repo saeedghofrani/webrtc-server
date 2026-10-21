@@ -2,6 +2,24 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { io } = require('socket.io-client');
 const { createSignalingServer } = require('./index');
+test('proxy headers are trusted only from loopback and explicit proxy IPs', () => {
+  const original = process.env.TRUSTED_PROXY_IPS;
+  try {
+    process.env.TRUSTED_PROXY_IPS = '172.19.0.1,10.0.0.0/8,*,not-an-ip';
+    const { app, io: signaling } = createSignalingServer();
+    const trusted = app.get('trust proxy fn');
+    assert.equal(trusted('127.0.0.1'), true);
+    assert.equal(trusted('::1'), true);
+    assert.equal(trusted('172.19.0.1'), true);
+    assert.equal(trusted('172.19.0.2'), false);
+    assert.equal(trusted('10.1.2.3'), false);
+    assert.equal(trusted('203.0.113.4'), false);
+    signaling.close();
+  } finally {
+    if (original === undefined) delete process.env.TRUSTED_PROXY_IPS;
+    else process.env.TRUSTED_PROXY_IPS = original;
+  }
+});
 const once = (s, event) => new Promise((resolve, reject) => {
   const timer = setTimeout(() => reject(new Error(`Timed out: ${event}`)), 2500);
   s.once(event, (payload) => { clearTimeout(timer); resolve(payload); });

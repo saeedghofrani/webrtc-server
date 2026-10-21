@@ -7,11 +7,18 @@ exports.createSignalingServer = createSignalingServer;
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const crypto_1 = require("crypto");
+const net_1 = require("net");
 const socket_io_1 = require("socket.io");
 const roomPolicy_1 = require("./roomPolicy");
-function createSignalingServer() {
+const callLinks_1 = require("./callLinks");
+function createSignalingServer(options = {}) {
     var _a;
     const app = (0, express_1.default)();
+    // Host Nginx reaches a published Docker port through the bridge gateway.
+    // Accept only explicitly configured proxy IPs, never a whole private subnet.
+    const proxyIps = (process.env.TRUSTED_PROXY_IPS || '').split(',').map((ip) => ip.trim()).filter((ip) => (0, net_1.isIP)(ip));
+    app.set('trust proxy', ['loopback', ...proxyIps]);
+    app.use('/api/call-links', express_1.default.json({ limit: '12kb' }), (0, callLinks_1.callLinksRouter)(options.callLinks));
     const server = http_1.default.createServer(app);
     const io = new socket_io_1.Server(server, {
         cors: { origin: ((_a = process.env.CORS_ORIGIN) === null || _a === void 0 ? void 0 : _a.split(',')) || true, credentials: true },
@@ -117,7 +124,7 @@ function createSignalingServer() {
         socket.on('leave-room', () => leave(socket));
         socket.on('disconnect', () => leave(socket));
     });
-    return { server, io };
+    return { app, server, io };
 }
 if (require.main === module) {
     const { server } = createSignalingServer();
