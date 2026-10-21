@@ -11,6 +11,9 @@ A small TypeScript, Express, and Socket.IO service for coordinating private, two
 - Broadcast bounded text-chat messages within a room
 - Notify the remaining participant when a peer leaves
 - Expose `GET /health` for deployment checks
+- Restrict signaling and chat to the socket's actual meeting
+- Recover refreshed tabs without waiting for stale polling connections to expire
+- Coordinate ICE restarts through one participant to avoid competing offers
 
 ## Event flow
 
@@ -60,7 +63,9 @@ npm test
 curl http://localhost:3001/health
 ```
 
-The test command compiles the TypeScript sources and verifies the two-person room policy.
+The test command compiles TypeScript and verifies capacity, duplicate joins,
+cross-room isolation, chat sender identity, malformed payloads, session replacement,
+leave notifications, and coordinated ICE recovery using real Socket.IO clients.
 
 ## Container run
 
@@ -73,6 +78,14 @@ The Compose definition includes a health check against `/health`. Configure prod
 ## Scope and limitations
 
 This service stores room state only in the Socket.IO process. It has no database, authentication, durable chat history, recording, moderation, or horizontal room-state adapter. Production use beyond a personal demonstration would require authenticated room access, rate limiting, structured logging, metrics, a shared Socket.IO adapter, and abuse controls.
+
+Per-tab session tokens are reconnect tokens, not user authentication. Chat has a
+bounded message size and a basic send interval; this does not replace deployment
+abuse controls. Keep backend port 3001 bound to loopback behind HTTPS.
+
+For rollback, retain a versioned copy of the previous Docker image, retag it to the
+Compose image name, then run `docker compose up -d --no-build`. This disconnects
+active calls and requires no database migration.
 
 ## Related repository
 
